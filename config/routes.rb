@@ -23,6 +23,10 @@ Rails.application.routes.draw do
       end
 
       resources :reservations, only: [:index, :create, :show, :update, :destroy]
+      
+      namespace :users do
+        get 'profile', to: 'profile#show'
+      end
     end
   end
 end
