@@ -47,13 +47,44 @@ module Api
 
       def create
         book = Book.find(params[:book_id])
-        reservation = current_user.reservations.new(book: book, reserved_at: Time.current, expires_at: Time.current + 3.days, note: params[:note])
-        ActiveRecord::Base.transaction do
-          if reservation.save
-            render json: reservation_json(reservation), status: :created
+        
+        # Check if user already has an active reservation for this book
+        existing_reservation = current_user.reservations.find_by(book: book, status: :active)
+        if existing_reservation
+          return render json: { 
+            errors: ["You already have an active reservation for this book"],
+            existing_reservation: reservation_json(existing_reservation)
+          }, status: :unprocessable_entity
+        end
+        
+        reservation = current_user.reservations.new(
+          book: book, 
+          reserved_at: Time.current, 
+          expires_at: Time.current + 3.days, 
+          note: params[:note]
+        )
+        
+        begin
+          ActiveRecord::Base.transaction do
+            if reservation.save
+              render json: reservation_json(reservation), status: :created
+            else
+              render json: { errors: reservation.errors.full_messages }, status: :unprocessable_entity
+              raise ActiveRecord::Rollback
+            end
+          end
+        rescue ActiveRecord::RecordNotUnique => e
+          # Handle unique constraint violation gracefully
+          existing = current_user.reservations.find_by(book: book)
+          if existing&.active?
+            render json: { 
+              errors: ["You already have an active reservation for this book"],
+              existing_reservation: reservation_json(existing)
+            }, status: :unprocessable_entity
           else
-            render json: { errors: reservation.errors.full_messages }, status: :unprocessable_entity
-            raise ActiveRecord::Rollback
+            render json: { 
+              errors: ["Unable to create reservation. Please try again."]
+            }, status: :unprocessable_entity
           end
         end
       end
@@ -69,8 +100,18 @@ module Api
 
       def destroy
         authorize_owner!
-        @reservation.update!(status: :cancelled)
-        # optionally destroy record: @reservation.destroy
+        ActiveRecord::Base.transaction do
+          # Store the original status before updating
+          was_active = @reservation.active?
+          @reservation.update!(status: :cancelled)
+          
+          # Manually trigger stock update if it was active
+          # This ensures stock is updated even if callbacks don't fire correctly
+          if was_active
+            @reservation.book.increase_stock!
+            @reservation.book.update_status_based_on_stock!
+          end
+        end
         render json: { message: "Reservation cancelled" }
       end
 
@@ -101,6 +142,7 @@ module Api
             price: book.price.to_f,
             condition: book.condition,
             status: book.status,
+            stock: book.stock,
             description: book.description,
             category: book.category ? { id: book.category.id, name: book.category.name } : nil,
             cover_image_url: cover_url ? "http://localhost:3000#{cover_url}" : nil

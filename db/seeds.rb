@@ -14,8 +14,8 @@ nonfiction = Category.find_or_create_by!(name: 'Non-Fiction')
 
 # sample books
 Book.create!([
-  { title: 'The Hobbit', author: 'J.R.R. Tolkien', isbn: '9780007118359', description: 'A fantasy novel', condition: 'like_new', price: 12.50, status: :available, category: fiction },
-  { title: 'Eloquent Ruby', author: 'Russ Olsen', isbn: '9780321584106', description: 'Ruby programming book', condition: 'good', price: 20.00, status: :available, category: nonfiction }
+  { title: 'The Hobbit', author: 'J.R.R. Tolkien', isbn: '9780007118359', description: 'A fantasy novel', condition: 'like_new', price: 12.50, status: :available, stock: 5, category: fiction },
+  { title: 'Eloquent Ruby', author: 'Russ Olsen', isbn: '9780321584106', description: 'Ruby programming book', condition: 'good', price: 20.00, status: :available, stock: 3, category: nonfiction }
 ])
 
 # test user (update password)

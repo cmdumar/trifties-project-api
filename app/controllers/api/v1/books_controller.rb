@@ -7,6 +7,10 @@ module Api
 
       def index
         @books = Book.includes(:category).order(created_at: :desc).limit(100)
+        # Preload user reservations if user is authenticated for better performance
+        if current_user
+          @books = @books.includes(reservations: :user)
+        end
         render json: @books.map { |b| book_json(b) }
       end
 
@@ -51,6 +55,11 @@ module Api
           q = q.where("price <= ?", params[:max_price].to_f)
         end
         q = q.where(status: params[:status]) if params[:status].present?
+        
+        # Preload user reservations if user is authenticated for better performance
+        if current_user
+          q = q.includes(reservations: :user)
+        end
 
         render json: q.limit(200).map { |b| book_json(b) }
       end
@@ -62,7 +71,7 @@ module Api
       end
 
       def book_params
-        params.require(:book).permit(:title, :author, :isbn, :description, :condition, :price, :status, :category_id, :published_at, :cover_image)
+        params.require(:book).permit(:title, :author, :isbn, :description, :condition, :price, :status, :category_id, :published_at, :cover_image, :stock)
       end
 
       def ensure_admin!
@@ -77,6 +86,12 @@ module Api
           cover_url = Rails.application.routes.url_helpers.rails_blob_path(b.cover_image, only_path: true)
         end
         
+        # Check if current user has an active reservation for this book
+        user_has_reservation = false
+        if current_user
+          user_has_reservation = current_user.reservations.exists?(book: b, status: :active)
+        end
+        
         {
           id: b.id,
           title: b.title,
@@ -86,6 +101,8 @@ module Api
           condition: b.condition,
           price: b.price.to_f,
           status: b.status,
+          stock: b.stock,
+          user_has_reservation: user_has_reservation,
           category: (b.category && { id: b.category.id, name: b.category.name }),
           published_at: b.published_at,
           cover_image_url: cover_url ? "http://localhost:3000#{cover_url}" : nil,

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_12_05_191941) do
+ActiveRecord::Schema[8.1].define(version: 2025_12_07_173919) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_05_191941) do
     t.decimal "price", precision: 8, scale: 2, default: "0.0", null: false
     t.date "published_at"
     t.integer "status", default: 0, null: false
+    t.integer "stock", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["category_id"], name: "index_books_on_category_id"
@@ -82,7 +83,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_05_191941) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["book_id"], name: "index_reservations_on_book_id"
-    t.index ["user_id", "book_id"], name: "index_res_on_user_and_book", unique: true
+    t.index ["user_id", "book_id"], name: "index_res_on_user_and_book_active", unique: true, where: "(status = 0)"
     t.index ["user_id"], name: "index_reservations_on_user_id"
   end
 

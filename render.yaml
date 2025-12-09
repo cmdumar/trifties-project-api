@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mysite
+    runtime: ruby
+    plan: free
+    buildCommand: './bin/render-build.sh'
+    startCommand: './bin/rails server'
+    envVars:
+      - key: postgresql://trifties_user:9OD2OWJZHMBa4hgHiiQNAhUQPgYv8EYF@dpg-d4s1kr95pdvs73btl1m0-a.virginia-postgres.render.com/trifties
+        fromDatabase:
+          name: mysite-db
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: WEB_CONCURRENCY
+        value: 2
+databases:
+  - name: mysite-db
+    plan: free
